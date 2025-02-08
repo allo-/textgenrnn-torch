@@ -374,6 +374,8 @@ def main():
                     token_level=args.token_level,
                     device=device,
                 )
+                if not args.no_cleanup:
+                    example = cleanup_sentence(example, args.token_level)
                 print(f"Example: {example}")
             print()
 
