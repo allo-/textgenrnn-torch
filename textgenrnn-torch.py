@@ -196,6 +196,11 @@ def main():
         help="Maximum number of words/characters per generated sentence",
     )
     parser.add_argument(
+        "--no-trim",
+        action="store_true",
+        help="Do not trim incomplete sentences",
+    )
+    parser.add_argument(
         "--num-sentences", type=int, default=1, help="Number of sentences to generate"
     )
     parser.add_argument(
@@ -373,6 +378,7 @@ def main():
                     max_length=args.length,
                     token_level=args.token_level,
                     device=device,
+                    trim=not args.no_trim
                 )
                 if not args.no_cleanup:
                     example = cleanup_sentence(example, args.token_level)
@@ -412,6 +418,7 @@ def main():
                 temperature=args.temperature,
                 token_level=token_level,
                 ban_eos=args.ban_eos,
+                trim=not args.no_trim
             )
 
             # Filter sentences that are too similar to the training data
