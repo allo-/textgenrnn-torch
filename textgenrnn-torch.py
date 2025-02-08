@@ -54,6 +54,8 @@ def cleanup_sentence(sentence, token_level="word"):
             .replace(" !", "!")
             .replace(" ;", ";")
             .replace(" : ", ": ")
+            .replace("( ", "(")
+            .replace(" )", ")")
             .replace(" ' s", "'s")
             .replace(" ' t ", "'t ")
             .replace(" ' ve", "'ve")
@@ -86,6 +88,27 @@ def find_closest_sentence(generated, candidates):
     return min_dist, closest
 
 
+def tokenize_line(line, token_level="word", tokenize_punctuation=True):
+    if token_level == "char":
+        return list(line)
+    else:
+        # Add spaces to tokenize punctuation as own tokens.
+        # At generation time, the cleanup function takes care
+        # of removing the extra spaces.
+        return (
+            line.replace(",", " , ")
+            .replace(".", " . ")
+            .replace("!", " ! ")
+            .replace("?", " ? ")
+            .replace(";", " ; ")
+            .replace(":", " : ")
+            .replace("(", " ( ")
+            .replace(")", " ) ")
+            .replace('"', ' " ')
+            .split()
+        )
+
+
 def generate_text(
     model,
     word_to_idx,
@@ -104,7 +127,7 @@ def generate_text(
     eos_idx = word_to_idx["<eos>"]
     bos_idx = word_to_idx["<bos>"]
 
-    seed_tokens = seed.split() if token_level == "word" else list(seed)
+    seed_tokens = tokenize_line(seed, token_level=token_level)
     seed_tokens = ["<bos>"] + seed_tokens
     indices = [word_to_idx.get(w, word_to_idx["<unk>"]) for w in seed_tokens]
     input_seq = torch.tensor([indices], device=device)
@@ -255,10 +278,7 @@ def main():
                     continue
                 sentences.append(sentence)
 
-                if args.token_level == "word":
-                    tokens = sentence.split()
-                else:
-                    tokens = list(sentence)
+                tokens = tokenize_line(sentence, token_level=args.token_level)
 
                 tokens = tokens[: args.max_seq_len]
                 sequences.append(["<bos>"] + tokens + ["<eos>"])
