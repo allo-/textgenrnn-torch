@@ -97,6 +97,7 @@ def generate_text(
     temperature=0.7,
     trim=True,
     trim_delimiters=".!?",
+    ban_eos=False,
 ):
     pad_idx = word_to_idx["<pad>"]
     unk_idx = word_to_idx["<unk>"]
@@ -121,6 +122,8 @@ def generate_text(
 
             logits[unk_idx] = -torch.inf
             logits[pad_idx] = -torch.inf
+            if ban_eos:
+                logits[eos_idx] = -torch.inf
 
             probs = torch.softmax(logits, dim=-1)
             next_token = torch.multinomial(probs, 1).item()
@@ -171,6 +174,9 @@ def main():
     )
     parser.add_argument(
         "--num-sentences", type=int, default=1, help="Number of sentences to generate"
+    )
+    parser.add_argument(
+        "--ban-eos", action="store_true", help="Ban the EOS token during inference"
     )
     parser.add_argument("--temperature", type=float, default=0.7)
     parser.add_argument(
@@ -383,6 +389,7 @@ def main():
                 max_length=args.length,
                 temperature=args.temperature,
                 token_level=token_level,
+                ban_eos=args.ban_eos,
             )
 
             # Filter sentences that are too similar to the training data
