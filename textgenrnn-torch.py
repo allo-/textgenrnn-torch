@@ -122,6 +122,8 @@ def generate_text(
     trim_delimiters=".!?",
     ban_eos=False,
     scale_eos=1,
+    xtc_threshold=0,
+    xtc_probability=0,
 ):
     pad_idx = word_to_idx["<pad>"]
     unk_idx = word_to_idx["<unk>"]
@@ -160,6 +162,13 @@ def generate_text(
                 logits[eos_idx] += torch.log(torch.tensor(scale_eos))
 
             probs = torch.softmax(logits, dim=-1)
+
+            # XTC
+            if torch.rand(1) < xtc_probability:
+                cutoff = probs.max() * xtc_threshold
+                logits[probs > cutoff] = -torch.inf
+                probs = torch.softmax(logits, dim=-1)
+
             next_token = torch.multinomial(probs, 1).item()
 
             if next_token == eos_idx:
@@ -221,6 +230,18 @@ def main():
         "--ban-eos", action="store_true", help="Ban the EOS token during inference"
     )
     parser.add_argument("--temperature", type=float, default=0.7)
+    parser.add_argument(
+        "--xtc-threshold",
+        type=float,
+        default=1,
+        help="XTC sampler threshold (1=disable)",
+    )
+    parser.add_argument(
+        "--xtc-probability",
+        type=float,
+        default=0,
+        help="XTC sampler probabilty (0=disable)",
+    )
     parser.add_argument(
         "--emb-dim",
         type=int,
@@ -434,6 +455,8 @@ def main():
                 temperature=args.temperature,
                 scale_eos=args.scale_eos,
                 ban_eos=args.ban_eos,
+                xtc_threshold=args.xtc_threshold,
+                xtc_probability=args.xtc_probability,
             )
 
             # Filter sentences that are too similar to the training data
