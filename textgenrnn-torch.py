@@ -121,6 +121,7 @@ def generate_text(
     trim=True,
     trim_delimiters=".!?",
     ban_eos=False,
+    scale_eos=1,
 ):
     pad_idx = word_to_idx["<pad>"]
     unk_idx = word_to_idx["<unk>"]
@@ -140,13 +141,23 @@ def generate_text(
             input_seq = input_seq[:, -1:]
 
         for _ in range(max_length):
+            # Evaluate the model
             logits, hidden = model(input_seq, hidden)
+
+            # Temperature
             logits = logits[0, -1] / temperature
 
+            # Ban <unk>, <pad>
             logits[unk_idx] = -torch.inf
             logits[pad_idx] = -torch.inf
+
+            probs = torch.softmax(logits, dim=-1)
+
+            # Scale or ban <eos>
             if ban_eos:
                 logits[eos_idx] = -torch.inf
+            elif scale_eos != 1:
+                logits[eos_idx] += torch.log(torch.tensor(scale_eos))
 
             probs = torch.softmax(logits, dim=-1)
             next_token = torch.multinomial(probs, 1).item()
@@ -202,6 +213,9 @@ def main():
     )
     parser.add_argument(
         "--num-sentences", type=int, default=1, help="Number of sentences to generate"
+    )
+    parser.add_argument(
+        "--scale-eos", type=float, default=1, help="Scale the eos probability"
     )
     parser.add_argument(
         "--ban-eos", action="store_true", help="Ban the EOS token during inference"
@@ -378,7 +392,7 @@ def main():
                     max_length=args.length,
                     token_level=args.token_level,
                     device=device,
-                    trim=not args.no_trim
+                    trim=not args.no_trim,
                 )
                 if not args.no_cleanup:
                     example = cleanup_sentence(example, args.token_level)
@@ -415,10 +429,11 @@ def main():
                 device,
                 seed=args.seed,
                 max_length=args.length,
-                temperature=args.temperature,
+                trim=not args.no_trim,
                 token_level=token_level,
+                temperature=args.temperature,
+                scale_eos=args.scale_eos,
                 ban_eos=args.ban_eos,
-                trim=not args.no_trim
             )
 
             # Filter sentences that are too similar to the training data
