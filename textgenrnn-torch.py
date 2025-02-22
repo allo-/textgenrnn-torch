@@ -285,8 +285,8 @@ def main():
     parser.add_argument(
         "--min-distance",
         type=int,
-        default=10,
-        help="Minimum Levenshtein distance to training data",
+        default=-1,
+        help="Minimum Levenshtein distance to training data (-1=default (depends on token-level))",
     )
     parser.add_argument(
         "--no-cleanup", action="store_true", help="Disable output post-processing"
@@ -302,6 +302,9 @@ def main():
         default_emb = 128
         default_hid = 128
         default_seq_len = 200  # Characters
+
+    default_min_dist_word = 10
+    default_min_dist_char = 1
 
     args.emb_dim = args.emb_dim or default_emb
     args.hid_dim = args.hid_dim or default_hid
@@ -434,6 +437,12 @@ def main():
         model = LSTMModel(*checkpoint["config"]).to(device)
         model.load_state_dict(checkpoint["state_dict"])
         model.eval()
+
+        if args.min_distance == -1:
+            if token_level == "word":
+                args.min_distance = default_min_dist_word
+            else:
+                args.min_distance = default_min_dist_char
 
         training_data = []
         if args.min_distance and args.compare_file:
