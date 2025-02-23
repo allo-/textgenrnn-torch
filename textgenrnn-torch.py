@@ -409,19 +409,20 @@ def main():
                 f"Epoch {epoch+1}/{args.epochs} | Loss: {current_loss:.4f} | Time: {epoch_time:.1f}s"
             )
 
-            for i in range(3):
+            for temp in [0.4, 0.7, 1.0]:
                 example = generate_text(
                     model=model,
                     word_to_idx=word_to_idx,
                     idx_to_word=idx_to_word,
                     max_length=args.length,
+                    temperature=temp,
                     token_level=args.token_level,
                     device=device,
                     trim=not args.no_trim,
                 )
                 if not args.no_cleanup:
                     example = cleanup_sentence(example, args.token_level)
-                print(f"Example: {example}")
+                print(f"Example (temperature: {temp:.1f}):\n{example}")
             print()
 
             if (epoch + 1) == args.epochs:
