@@ -323,7 +323,8 @@ def main():
 
                 tokens = tokenize_line(sentence, token_level=args.token_level)
 
-                tokens = tokens[: args.max_seq_len]
+                if args.max_seq_len > 0:
+                    tokens = tokens[: args.max_seq_len]
                 sequences.append(["<bos>"] + tokens + ["<eos>"])
 
         # Sort tokens by frequency
