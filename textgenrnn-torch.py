@@ -9,6 +9,7 @@ import torch.optim as optim
 from torch.utils.data import Dataset, DataLoader
 from torch.nn.utils.rnn import pad_sequence
 
+from tqdm import tqdm
 from Levenshtein import distance as levenshtein_distance
 
 
@@ -363,12 +364,12 @@ def main():
         criterion = nn.CrossEntropyLoss(ignore_index=pad_idx)
 
         start_time = time.time()
-        for epoch in range(args.epochs):
+        for epoch in tqdm(range(args.epochs), desc="Epoch"):
             model.train()
             opt.zero_grad()
 
             total_loss = 0
-            for i, (inputs, targets) in enumerate(dataloader):
+            for i, (inputs, targets) in (pbar := tqdm(enumerate(dataloader), total=len(dataloader), desc="Batch")):
                 inputs, targets = inputs.to(device), targets.to(device)
                 logits, _ = model(inputs)
                 loss = criterion(logits.view(-1, len(vocab)), targets.view(-1))
@@ -381,6 +382,8 @@ def main():
                     opt.zero_grad()
 
                 total_loss += loss.item() * args.accum_steps
+                current_loss = total_loss / (i+1)
+                pbar.set_postfix({"loss": f"{current_loss:.02f}"})
 
             current_loss = total_loss / len(dataloader)
             checkpoint = {
